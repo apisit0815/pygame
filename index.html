@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rotating Triangle with Bouncing Ball</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    canvas {
+      display: block;
+      background-color: black;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const WIDTH = canvas.width;
+    const HEIGHT = canvas.height;
+
+    const COLORS = ['red', 'green', 'blue', 'yellow', 'cyan', 'magenta'];
+
+    const TRIANGLE_SIZE = 200;
+    const TRIANGLE_POS = { x: WIDTH / 2, y: HEIGHT / 2 };
+    let angle = 0;
+    const rotationSpeed = 0.02;
+
+    const BALL_RADIUS = 15;
+    const ball = {
+      x: WIDTH / 2,
+      y: HEIGHT / 2,
+      vx: 3,
+      vy: 3,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    };
+
+    function rotatePoint(px, py, angle, cx, cy) {
+      const s = Math.sin(angle);
+      const c = Math.cos(angle);
+      px -= cx;
+      py -= cy;
+      const xnew = px * c - py * s;
+      const ynew = px * s + py * c;
+      return { x: xnew + cx, y: ynew + cy };
+    }
+
+    function getTriangleVertices(center, size, angle) {
+      const halfHeight = Math.sqrt(3) / 2 * size;
+      const vertices = [
+        { x: center.x, y: center.y - 2 * halfHeight / 3 },
+        { x: center.x - size / 2, y: center.y + halfHeight / 3 },
+        { x: center.x + size / 2, y: center.y + halfHeight / 3 }
+      ];
+      return vertices.map(v => rotatePoint(v.x, v.y, angle, center.x, center.y));
+    }
+
+    function dot(v1, v2) {
+      return v1.x * v2.x + v1.y * v2.y;
+    }
+
+    function normalize(v) {
+      const mag = Math.sqrt(v.x ** 2 + v.y ** 2);
+      return mag === 0 ? { x: 0, y: 0 } : { x: v.x / mag, y: v.y / mag };
+    }
+
+    function reflectVector(incident, normal) {
+      const d = dot(incident, normal);
+      return {
+        x: incident.x - 2 * d * normal.x,
+        y: incident.y - 2 * d * normal.y
+      };
+    }
+
+    function getClosestPointOnSegment(p, a, b) {
+      const ab = { x: b.x - a.x, y: b.y - a.y };
+      const ap = { x: p.x - a.x, y: p.y - a.y };
+      const abLenSq = ab.x * ab.x + ab.y * ab.y;
+      if (abLenSq === 0) return a;
+      let t = dot(ap, ab) / abLenSq;
+      t = Math.max(0, Math.min(1, t));
+      return { x: a.x + t * ab.x, y: a.y + t * ab.y };
+    }
+
+    function checkCollision(ball, vertices) {
+      const speed = { x: ball.vx, y: ball.vy };
+      for (let i = 0; i < 3; i++) {
+        const p1 = vertices[i];
+        const p2 = vertices[(i + 1) % 3];
+        const closest = getClosestPointOnSegment(ball, p1, p2);
+        const dx = ball.x - closest.x;
+        const dy = ball.y - closest.y;
+        const distSq = dx * dx + dy * dy;
+
+        if (distSq < BALL_RADIUS * BALL_RADIUS) {
+          const edge = { x: p2.x - p1.x, y: p2.y - p1.y };
+          let normal = normalize({ x: -edge.y, y: edge.x });
+          const toBall = { x: ball.x - closest.x, y: ball.y - closest.y };
+          if (dot(toBall, normal) < 0) {
+            normal = { x: -normal.x, y: -normal.y };
+          }
+          const reflected = reflectVector(speed, normal);
+          ball.vx = reflected.x;
+          ball.vy = reflected.y;
+          ball.color = COLORS[Math.floor(Math.random() * COLORS.length)];
+          const overlap = BALL_RADIUS - Math.sqrt(distSq);
+          ball.x += normal.x * overlap * 1.01;
+          ball.y += normal.y * overlap * 1.01;
+          break;
+        }
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+      angle += rotationSpeed;
+      const vertices = getTriangleVertices(TRIANGLE_POS, TRIANGLE_SIZE, angle);
+
+      ctx.strokeStyle = 'white';
+      ctx.beginPath();
+      ctx.moveTo(vertices[0].x, vertices[0].y);
+      vertices.forEach((v, i) => {
+        const next = vertices[(i + 1) % 3];
+        ctx.lineTo(next.x, next.y);
+      });
+      ctx.stroke();
+
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+
+      checkCollision(ball, vertices);
+
+      ctx.fillStyle = ball.color;
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, BALL_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+
+      requestAnimationFrame(draw);
+    }
+
+    draw();
+  </script>
+</body>
+</html>
