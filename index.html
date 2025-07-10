@@ -9,24 +9,32 @@
       margin: 0;
       background-color: black;
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       height: 100vh;
     }
     canvas {
-      display: block;
       background-color: black;
+    }
+    button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
   <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <button id="toggleButton">Pause</button>
 
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const WIDTH = canvas.width;
     const HEIGHT = canvas.height;
+    const toggleButton = document.getElementById('toggleButton');
 
     const COLORS = ['red', 'green', 'blue', 'yellow', 'cyan', 'magenta'];
 
@@ -43,6 +51,14 @@
       vy: 3,
       color: COLORS[Math.floor(Math.random() * COLORS.length)]
     };
+
+    let isRunning = true;
+
+    toggleButton.addEventListener('click', () => {
+      isRunning = !isRunning;
+      toggleButton.textContent = isRunning ? 'Pause' : 'Start';
+      if (isRunning) draw();
+    });
 
     function rotatePoint(px, py, angle, cx, cy) {
       const s = Math.sin(angle);
@@ -121,6 +137,8 @@
     }
 
     function draw() {
+      if (!isRunning) return;
+
       ctx.clearRect(0, 0, WIDTH, HEIGHT);
 
       angle += rotationSpeed;
